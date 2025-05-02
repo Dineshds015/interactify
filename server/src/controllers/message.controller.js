@@ -6,6 +6,7 @@ export const getUsersForSidebar = async (req, res) => {
     try {
         const loggedInUserId = req.user._id;
         const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
+        res.status(200).json(filteredUsers);
     } catch (error) {
         console.error("Error in getUsersForSidebar: ", error.message);
         res.status(500).json({ error: "Internal server error" });
@@ -19,10 +20,11 @@ export const getMessages = async (req, res) => {
 
         const messages = await Message.find({
             $or: [
-                { senderId: myId, receiverId: userToCharId },
+                { senderId: myId, receiverId: userToChatId },
                 { senderId: userToChatId, receiverId: myId }
             ]
-        })
+        });
+        res.status(200).json(messages);
     } catch (error) {
         console.log("Error in getMessages controller: ", error.message);
         res.status(500).json({ error: "Internal server error" });
@@ -34,7 +36,7 @@ export const sendMessage = async (req, res) => {
     try {
         const { text, image } = req.body;
         const { id: receiverId } = req.params;
-        const denderId = req.user._id;
+        const senderId = req.user._id;
 
         let imageUrl;
         if (image) {
