@@ -18,12 +18,11 @@ export const useChatStore = create((set, get) => ({
         } catch (error) {
             toast.error(error.response.data.message);
         } finally {
-            set({ isUsersLoading: false })
+            set({ isUsersLoading: false });
         }
     },
 
     getMessages: async (userId) => {
-
         set({ isMessagingLoading: true });
         try {
             const res = await axiosInstance.get(`/messages/${userId}`);
@@ -31,32 +30,44 @@ export const useChatStore = create((set, get) => ({
         } catch (error) {
             toast.error(error.response.data.message);
         } finally {
-            set({ isMessagingLoading: false })
+            set({ isMessagingLoading: false });
         }
     },
 
     sendMessage: async (messageData) => {
-        const { selectedUser, messages } = get();
+        const { selectedUser, messages, users } = get();
         try {
             const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
-            set({ messages: [...messages, res.data] });
+            const updatedUsers = [
+                users.find((u) => u._id === selectedUser._id),
+                ...users.filter((u) => u._id !== selectedUser._id)
+            ];
+            set({
+                messages: [...messages, res.data],
+                users: updatedUsers
+            });
         } catch (error) {
             toast.error(error.response.data.message);
         }
     },
 
     subscribeToMessages: () => {
-        const { selectedUser } = get();
-        if (!selectedUser) return;
-
         const socket = useAuthStore.getState().socket;
 
         socket.on("newMessage", (newMessage) => {
-            const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
-            if (!isMessageSentFromSelectedUser) return;
-            set({
-                messages: [...get().messages, newMessage],
-            });
+            const { selectedUser, messages, users } = get();
+            const isFromSelectedUser = selectedUser?._id === newMessage.senderId;
+
+            if (isFromSelectedUser) {
+                set({ messages: [...messages, newMessage] });
+            }
+
+            const updatedUsers = [
+                users.find((u) => u._id === newMessage.senderId),
+                ...users.filter((u) => u._id !== newMessage.senderId)
+            ];
+
+            set({ users: updatedUsers });
         });
     },
 
