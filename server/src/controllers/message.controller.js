@@ -111,7 +111,9 @@ export const createGroup = async (req, res) => {
 export const getUserGroups = async (req, res) => {
     try {
         const userId = req.user._id;
-        const groups = await Group.find({ members: userId });
+        const groups = await Group.find({ members: userId })
+            .populate("members", "fullName profilePic")
+            .populate("admin", "fullName profilePic");
         res.status(200).json(groups);
     } catch (error) {
         console.error("Error in getUserGroups:", error.message);

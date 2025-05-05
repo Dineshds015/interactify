@@ -1,13 +1,17 @@
 import { useState, useEffect } from "react";
 import { axiosInstance } from "../lib/axios";
-import { DoorClosed, X } from "lucide-react";
+import { Camera, DoorClosed, X } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
+import toast from "react-hot-toast";
+
 const CreateGroupPopover = ({ onClose }) => {
-    const { authUser } = useAuthStore();
     const [groupName, setGroupName] = useState("");
     const [users, setUsers] = useState([]); // List of all users
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedUsers, setSelectedUsers] = useState([]);
+    const [selectedGroupImg, setSelectedGroupImg] = useState(null); // State for the group image
+
+    const { authUser } = useAuthStore();
 
     // Fetch users based on search query
     useEffect(() => {
@@ -16,17 +20,15 @@ const CreateGroupPopover = ({ onClose }) => {
                 try {
                     const response = await axiosInstance.get(`/messages/search-users?search=${searchQuery}`);
 
-                    // Ensure the response data is an array
                     const allUsers = Array.isArray(response.data) ? response.data : [];
                     const filtered = authUser?._id
                         ? allUsers.filter((u) => u._id !== authUser._id)
                         : allUsers;
-                    console.log("USSERSS: ", filtered);
 
                     setUsers(filtered);
                 } catch (error) {
                     console.error("Error fetching users:", error);
-                    setUsers([]); // Set an empty array if the request fails
+                    setUsers([]);
                 }
             } else {
                 setUsers([]);
@@ -36,6 +38,18 @@ const CreateGroupPopover = ({ onClose }) => {
         fetchUsers();
     }, [searchQuery]);
 
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+
+        reader.onload = () => {
+            const base64Image = reader.result;
+            setSelectedGroupImg(base64Image);
+        };
+    };
 
     // Handle adding users to the group
     const handleAddUser = (user) => {
@@ -52,15 +66,17 @@ const CreateGroupPopover = ({ onClose }) => {
                 const response = await axiosInstance.post("/messages/groups", {
                     name: groupName,
                     members: selectedUsers.map((user) => user._id),
+                    groupPic: selectedGroupImg, // Send the selected group image
                 });
                 // You can do something with the response here (e.g., show a success message or close the modal)
                 console.log("Group created:", response.data);
                 onClose(); // Close the popup after creating the group
             } catch (error) {
+                toast.error("Error creating group");
                 console.error("Error creating group:", error);
             }
         } else {
-            alert("Please enter a group name and add at least one user.");
+            toast.error("Please enter a group name and add at least one user.");
         }
     };
 
@@ -79,6 +95,36 @@ const CreateGroupPopover = ({ onClose }) => {
                 {/* Scrollable Content */}
                 <div className="flex-1 overflow-y-auto pr-1">
                     <h3 className="text-lg font-semibold mb-4 text-zinc-800">Create Group</h3>
+
+                    {/* Group Image Upload */}
+                    <div className="mb-4">
+                        <label className="text-sm text-zinc-400">Group Image</label>
+
+                        <div className="flex flex-col items-center gap-4 mt-2">
+                            <div className="relative">
+                                <img
+                                    src={selectedGroupImg || "/avatar.png"}
+                                    alt="Group"
+                                    className="size-20 rounded-full object-cover border-4 border-zinc-300"
+                                />
+                                <label
+                                    htmlFor="group-img-upload"
+                                    className="absolute bottom-0 right-0 bg-zinc-700 p-2 rounded-full cursor-pointer hover:scale-105 transition-all duration-200"
+                                >
+                                    <Camera className="size-4 text-white" />
+                                    <input
+                                        type="file"
+                                        id="group-img-upload"
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={handleImageUpload}
+                                    />
+                                </label>
+                            </div>
+                            <p className="text-xs text-zinc-500">Click the camera to upload a group image</p>
+                        </div>
+                    </div>
+
 
                     {/* Group Name Input */}
                     <input
@@ -151,6 +197,7 @@ const CreateGroupPopover = ({ onClose }) => {
                             </ul>
                         </div>
                     )}
+
                 </div>
 
                 {/* Fixed Create Group Button */}
@@ -165,9 +212,6 @@ const CreateGroupPopover = ({ onClose }) => {
             </div>
         </div>
     );
-
-
-
 };
 
 export default CreateGroupPopover;

@@ -6,6 +6,7 @@ import { useAuthStore } from "./useAuthStore";
 export const useChatStore = create((set, get) => ({
     messages: [],
     users: [],
+    groups: [],
     selectedUser: null,
     isUsersLoading: false,
     isMessagingLoading: false,
@@ -20,6 +21,11 @@ export const useChatStore = create((set, get) => ({
         } finally {
             set({ isUsersLoading: false });
         }
+    },
+
+    getGroups: async () => {
+        const res = await axiosInstance.get("/messages/groups");
+        set({ groups: res.data });
     },
 
     getMessages: async (userId) => {
