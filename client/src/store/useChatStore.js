@@ -5,6 +5,7 @@ import { useAuthStore } from "./useAuthStore";
 
 export const useChatStore = create((set, get) => ({
     messages: [],
+    unreadMessages: {},
     users: [],
     selectedUser: null,
     isUsersLoading: false,
@@ -55,11 +56,19 @@ export const useChatStore = create((set, get) => ({
         const socket = useAuthStore.getState().socket;
 
         socket.on("newMessage", (newMessage) => {
-            const { selectedUser, messages, users } = get();
+            const { selectedUser, messages, users, unreadMessages } = get();
             const isFromSelectedUser = selectedUser?._id === newMessage.senderId;
 
             if (isFromSelectedUser) {
                 set({ messages: [...messages, newMessage] });
+            } else {
+                const count = unreadMessages[newMessage.senderId] || 0;
+                set({
+                    unreadMessages: {
+                        ...unreadMessages,
+                        [newMessage.senderId]: count + 1
+                    }
+                });
             }
 
             const updatedUsers = [
@@ -70,11 +79,26 @@ export const useChatStore = create((set, get) => ({
             set({ users: updatedUsers });
         });
     },
+    setSelectedUser: (user) => {
+        const { unreadMessages } = get();
+        const updatedUnread = { ...unreadMessages };
+
+        if (user?._id) {
+            delete updatedUnread[user._id]; // Clear only this user
+        } else {
+            // Clear all if user is null
+            for (const key in updatedUnread) {
+                delete updatedUnread[key];
+            }
+        }
+
+        set({ selectedUser: user, unreadMessages: updatedUnread });
+    },
+
 
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
         socket.off("newMessage");
     },
 
-    setSelectedUser: (selectedUser) => set({ selectedUser }),
 }));
