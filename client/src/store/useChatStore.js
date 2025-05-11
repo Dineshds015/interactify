@@ -59,6 +59,8 @@ export const useChatStore = create((set, get) => ({
             const { selectedUser, messages, users, unreadMessages } = get();
             const isFromSelectedUser = selectedUser?._id === newMessage.senderId;
 
+            const sound = new Audio("/message.mp3");
+
             if (isFromSelectedUser) {
                 set({ messages: [...messages, newMessage] });
             } else {
@@ -66,9 +68,12 @@ export const useChatStore = create((set, get) => ({
                 set({
                     unreadMessages: {
                         ...unreadMessages,
-                        [newMessage.senderId]: count + 1
+                        [newMessage.senderId]: count + 1,
+
                     }
                 });
+
+                sound.play();
             }
 
             const updatedUsers = [
